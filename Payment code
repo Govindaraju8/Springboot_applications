@@ -1,0 +1,424 @@
+/******************************************DAO *********************************************/
+
+package com.spring.boot.jdbc.Customeroptions.dao;
+
+import java.util.List;
+
+import javax.sql.DataSource;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
+
+import com.spring.boot.jdbc.Customeroptions.contracts.*;
+import com.spring.boot.jdbc.Customeroptions.model.InsurancePolicyPayment;
+import com.spring.boot.jdbc.Customeroptions.model.NetworkHospital;
+
+@Component
+public class HospitalDAO implements HospitalIntDAO {
+	JdbcTemplate jdbcTemplate;
+
+	@Autowired
+	public HospitalDAO(DataSource dataSource) {
+		jdbcTemplate = new JdbcTemplate(dataSource);
+	}
+
+	private final String SQL_DISPLAY_NetworkHospitals = "SELECT * FROM NetworkHospitals";
+	private final String SQL_DISPLAY_insurancepayments = "SELECT * FROM InsurancePolicyPayments";
+
+    private final String SQL_DISPLAY_NETWORKHOSPITALSBYCITY = "SELECT * FROM NetworkHospitals WHERE hosp_city = ?";
+    private final String SQL_DISPLAY_BYCITY = "SELECT * FROM NetworkHospitals WHERE hosp_grade = ?";
+    private final String SQL_DISPLAY_FACILITY = "SELECT * FROM NetworkHospitals WHERE hosp_facility = ?";
+    private final String SQL_DISPLAY_ID = "SELECT * FROM NetworkHospitals WHERE hosp_id = ?";
+    private final String SQL_INSERT_PAYMENT = "INSERT INTO InsurancePolicyPayments (inpp_iplc_id, inpp_trans_id, inpp_amount, inpp_paymode) VALUES (?, ?, ?, ?)";
+
+    private final String SQL_UPDATE_TRANSACTIONID = "UPDATE InsurancePolicyPayments SET inpp_trans_id = ? WHERE inpp_iplc_id = ? AND iplc_sindex = (SELECT iplc_sindex FROM InsurancePolicyPayments  WHERE inpp_trans_id IS NULL ORDER BY iplc_sindex LIMIT 1)";
+    		
+	private final String SQL_DISPLAY_FIRSTPP = "SELECT * FROM InsurancePolicyPayments WHERE inpp_iplc_id = ? LIMIT 1";
+
+	private final String SQL_DISPLAY_TRANSACTIONSBYCUSTID="SELECT\r\n"
+			+ "    IPP.inpp_id,\r\n"
+			+ "    IPP.inpp_iplc_id,\r\n"
+			+ "    IPP.inpp_trans_id,\r\n"
+			+ "    IPP.inpp_amount,\r\n"
+			+ "    IPP.inpp_paymode\r\n"
+			+ "FROM\r\n"
+			+ "    InsurancePolicyPayments AS IPP\r\n"
+			+ "WHERE\r\n"
+			+ "    IPP.inpp_iplc_id IN (\r\n"
+			+ "        SELECT iplc_id\r\n"
+			+ "        FROM InsurancePolicies\r\n"
+			+ "        WHERE iplc_cust_id = ?\r\n"
+			+ "    );";
+	@Override
+	public List<NetworkHospital> getAllHospitalsList() {
+		
+		return jdbcTemplate.query(SQL_DISPLAY_NetworkHospitals, new HospitalMapper());
+	}
+	@Override
+	public List<NetworkHospital> filterHospitalsByCity(String city) {
+	    //String sql = "SELECT * FROM NetworkHospitals WHERE hosp_city = ?";
+	    return jdbcTemplate.query(SQL_DISPLAY_NETWORKHOSPITALSBYCITY, new HospitalMapper(), city);
+	}
+	
+	@Override
+	public List<NetworkHospital> filterHospitalsByGrade(String grade) {
+	    
+	    return jdbcTemplate.query(SQL_DISPLAY_BYCITY, new HospitalMapper(), grade);
+	}
+	
+	@Override
+	public List<NetworkHospital> filterHospitalsByFacility(String facility) {
+	    
+	    return jdbcTemplate.query(SQL_DISPLAY_FACILITY, new HospitalMapper(), facility);
+	}
+	
+	@Override
+	public NetworkHospital filterHospitalsByID(int id) {
+	    
+		return jdbcTemplate.queryForObject(SQL_DISPLAY_ID, new Object[] {id}, new HospitalMapper());
+		}
+	
+	@Override
+	public boolean createPayment(InsurancePolicyPayment payment) {
+	    return jdbcTemplate.update(SQL_INSERT_PAYMENT, payment.getPolicyId(), payment.getTransactionId(),
+	            payment.getAmount(), payment.getPaymentMode()) > 0;
+	}
+	@Override
+	public List<InsurancePolicyPayment> getAllInsurancePolicyPaymentsList() {
+		// TODO Auto-generated method stub
+		return jdbcTemplate.query(SQL_DISPLAY_insurancepayments, new InsurancePolicyPaymentMapper());
+
+	}
+	@Override
+	public void setdata(String hsn) {
+		//System.out.println(hsn);
+		jdbcTemplate.update("insert ");
+	}
+
+	@Override
+	public List<InsurancePolicyPayment> getAllFirstPolicy(int policyId) {
+		// TODO Auto-generated method stub
+		return jdbcTemplate.query(SQL_DISPLAY_FIRSTPP, new InsurancePolicyPaymentMapper(), policyId);
+
+	}
+
+	@Override
+	public boolean updateTransactionId(int policyId, String newTransactionId) {
+		return jdbcTemplate.update(SQL_UPDATE_TRANSACTIONID, newTransactionId, policyId) > 0;
+	}
+	
+	@Override
+	public List<InsurancePolicyPayment> getAllCustPayments(int custId) {
+		// TODO Auto-generated method stub
+		return jdbcTemplate.query(SQL_DISPLAY_TRANSACTIONSBYCUSTID, new InsurancePolicyPaymentMapper(), custId);
+
+	}
+}
+
+/******************************************repository *******************************************/
+package com.spring.boot.jdbc.Customeroptions.repository;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+import com.spring.boot.jdbc.Customeroptions.contracts.HospitalMapper;
+import com.spring.boot.jdbc.Customeroptions.dao.HospitalDAO;
+import com.spring.boot.jdbc.Customeroptions.model.InsurancePolicyPayment;
+import com.spring.boot.jdbc.Customeroptions.model.NetworkHospital;
+
+@Repository
+public class HospitalRepo {
+	@Autowired
+	private HospitalDAO hospitaldao;
+	
+	
+	public List<NetworkHospital> getAllHospitalsData(){
+		List<NetworkHospital> l1= hospitaldao.getAllHospitalsList();
+		return l1;
+	}
+	
+	public List<NetworkHospital> getfilterHospitalsByCity(String city) {
+		// TODO Auto-generated method stub
+		List<NetworkHospital> l2= hospitaldao.filterHospitalsByCity(city);
+	    return l2;
+		
+	}
+	
+	public List<NetworkHospital> getfilterHospitalsByGrade(String grade) {
+		// TODO Auto-generated method stub
+		List<NetworkHospital> l3= hospitaldao.filterHospitalsByGrade(grade);
+	    return l3;
+		
+	}
+	
+	public List<NetworkHospital> getfilterHospitalsByFacility(String facility) {
+		// TODO Auto-generated method stub
+		List<NetworkHospital> l4= hospitaldao.filterHospitalsByFacility(facility);
+	    return l4;
+		
+	}
+	
+	public NetworkHospital getfilterHospitalsByID(int id) {
+		// TODO Auto-generated method stub
+		NetworkHospital l5= hospitaldao.filterHospitalsByID(id);
+	    return l5;
+		
+	}
+
+	public boolean insertpayment(InsurancePolicyPayment p)
+	{
+		return hospitaldao.createPayment(p);
+	}
+	
+	public List<InsurancePolicyPayment> getAllIPPsData(){
+		List<InsurancePolicyPayment> l1= hospitaldao.getAllInsurancePolicyPaymentsList();
+		return l1;
+	}
+	
+	//public object setdataRep(String i) {
+	//	return hospitaldao.setdata(i);
+		
+	//}
+	public List<InsurancePolicyPayment> getAllFirstPP(int id) {
+		List<InsurancePolicyPayment> l3 = hospitaldao.getAllFirstPolicy(id);
+		return l3;
+	}
+
+	public boolean updateTransactionsId(int policyId, String newTransactionId) {
+		return hospitaldao.updateTransactionId(policyId, newTransactionId);
+	}
+	
+	public List<InsurancePolicyPayment> getAllTransactionsbyID(int custID) {
+		List<InsurancePolicyPayment> l3 = hospitaldao.getAllCustPayments(custID);
+		return l3;
+	}
+}
+
+/**********************************controller **********************************************/
+
+package com.spring.boot.jdbc.Customeroptions.controller;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.spring.boot.jdbc.Customeroptions.model.InsurancePolicyPayment;
+import com.spring.boot.jdbc.Customeroptions.model.NetworkHospital;
+import com.spring.boot.jdbc.Customeroptions.model.RespPay;
+import com.spring.boot.jdbc.Customeroptions.repository.HospitalRepo;
+
+@RestController
+public class HospitalController {
+
+	@Autowired
+	HospitalRepo hospitalres;
+
+	@GetMapping(value = "/hospitals")
+	public List<NetworkHospital> getAll() {
+
+		List<NetworkHospital> hosp = hospitalres.getAllHospitalsData();
+		return hosp;
+	}
+
+	@GetMapping("/filterByCity/{city}")
+	public List<NetworkHospital> getHospitalsByCity(@PathVariable String city) {
+		List<NetworkHospital> hospitals = hospitalres.getfilterHospitalsByCity(city);
+		return hospitals;
+	}
+
+	@GetMapping("/filterByGrade/{grade}")
+	public List<NetworkHospital> getHospitalsByGrade(@PathVariable String grade) {
+		List<NetworkHospital> hospitals = hospitalres.getfilterHospitalsByGrade(grade);
+		return hospitals;
+	}
+
+	@GetMapping("/filterByFacility/{facility}")
+	public List<NetworkHospital> getfilterHospitalsByFacility(@PathVariable String facility) {
+		List<NetworkHospital> hospitals = hospitalres.getfilterHospitalsByFacility(facility);
+		return hospitals;
+	}
+
+	@GetMapping("/filterByID/{id}")
+	public NetworkHospital getfilterHospitalsByID(@PathVariable int id) {
+		NetworkHospital hospitals = hospitalres.getfilterHospitalsByID(id);
+		return hospitals;
+	}
+
+	@PostMapping("/create")
+	public ResponseEntity<String> createPayment(@RequestBody InsurancePolicyPayment payment) {
+		try {
+			boolean result = hospitalres.insertpayment(payment);
+			if (result) {
+				return ResponseEntity.ok("Payment created successfully");
+			} else {
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to create payment");
+			}
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to create payment");
+		}
+	}
+	
+	@GetMapping(value = "/ipps")
+	public List<InsurancePolicyPayment> getAllpps() {
+
+		List<InsurancePolicyPayment> hosp = hospitalres.getAllIPPsData();
+		return hosp;
+	}
+	
+	 @GetMapping("/presp")
+	    @ResponseBody
+	    public String handlePrespRequest(@RequestParam("par") String parameter, @RequestParam("pid") String paymentId) {
+	        // Your logic to handle the presp request goes here
+	        // You can access the 'parameter' and 'paymentId' values passed in the request
+	        
+	        // Example: You can print the values for demonstration
+	        System.out.println("par: " + parameter);
+	        System.out.println("pid: " + paymentId);
+	        
+	        // You can return a response as needed
+	        return "Response from handlePrespRequest";
+	    }
+	 
+	 @GetMapping(value = "/ipps/{id}")
+		public List<InsurancePolicyPayment> getAllFirstPP(@PathVariable int id) {
+
+			List<InsurancePolicyPayment> hosp = hospitalres.getAllFirstPP(id);
+			return hosp;
+		}
+	 
+	 @GetMapping(value = "/ippsts/{id}")
+		public List<InsurancePolicyPayment> getAlltransactionsbycustid(@PathVariable int id) {
+
+			List<InsurancePolicyPayment> hosp = hospitalres.getAllTransactionsbyID(id);
+			return hosp;
+		}
+	 
+	 @PostMapping("/updatePayment")
+		public ResponseEntity<String> updatePaymentRecord(@RequestBody Map<String, String> requestData) {
+			System.out.println(requestData);
+			String policyIdStr = requestData.get("policyId");
+			String transactionId = requestData.get("transactionId");
+
+			try {
+				int policyId = Integer.parseInt(policyIdStr);
+
+				// Call the updateTransactionId method from the repository to update the record
+				boolean updateSuccess = hospitalres.updateTransactionsId(policyId, transactionId);
+
+				if (updateSuccess) {
+					return ResponseEntity.ok("Payment record updated successfully.");
+				} else {
+					return ResponseEntity.badRequest().body("Failed to update payment record.");
+				}
+			} catch (NumberFormatException e) {
+				return ResponseEntity.badRequest().body("Invalid policyId provided.");
+			}
+		}
+	 
+	 
+}
+/*********************************** HTML page **************************************************8/
+
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Insert title here</title>
+    <style>
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <center>
+        <h1>Your Total Amount</h1><br><br>
+        <input type="number" id="amountInput" placeholder="Enter Amount" min="0" step="0.01"><br><br>
+        <button id="rzp-button1">
+            <i class="fas fa-money-bill"></i> Make Payment
+        </button>
+        <p id="amountMessage"></p>
+    </center>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        document.getElementById('rzp-button1').onclick = function () {
+            var amountInput = document.getElementById('amountInput');
+            var amountMessage = document.getElementById('amountMessage');
+            var amount = parseFloat(amountInput.value);
+
+            if (isNaN(amount) || amount <= 0) {
+                amountMessage.innerText = "Please enter a valid amount.";
+                return;
+            }
+
+            var options = {
+                "key": "rzp_test_ep0Ba9QlOmhL7w",
+                "amount": amount * 100, // Amount in paise (100 paise = 1 INR)
+                "currency": "INR",
+                "handler": function (response) {
+                    var transactionId = response.razorpay_payment_id;
+                    updateDB(transactionId);
+                },
+
+            };
+
+            var rzp1 = new Razorpay(options);
+            rzp1.open();
+        }
+        
+        function updateDB(transactionId) {
+            var policyId =  2;
+            var requestData = {
+                policyId: policyId,
+                transactionId: transactionId
+            };
+
+            // Make an AJAX POST request to your Spring Boot controller
+            fetch('/updatePayment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData),
+            })
+            .then(function(response) {
+                if (response.status === 200) {
+                    // Payment record updated successfully
+                    alert('Payment record updated successfully.');
+                } else {
+                    // Handle error cases here
+                    alert('Failed to update payment record.');
+                }
+            })
+            .catch(function(error) {
+                console.error('Error:', error);
+            });
+        }
+
+    </script>
+</body>
+
+</html>
