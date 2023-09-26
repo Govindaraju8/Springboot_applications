@@ -1,1 +1,111 @@
+select * from insurancepolicypayments
 
+ALTER TABLE insurancepolicypayments
+ADD COLUMN inpp_date DATE;
+
+
+select * from customers
+
+SELECT
+    IPP.inpp_id,
+    IPP.inpp_iplc_id,
+    IPP.inpp_trans_id,
+    IPP.inpp_amount,
+    IPP.inpp_paymode,
+    IPP.inpp_date
+FROM
+    InsurancePolicyPayments AS IPP
+WHERE
+    IPP.inpp_iplc_id IN (
+        SELECT iplc_id
+        FROM InsurancePolicies
+        WHERE iplc_cust_id = 1
+    );
+
+UPDATE InsurancePolicyPayments 
+SET inpp_trans_id = 'ffyhuj'
+WHERE inpp_iplc_id = 1 
+AND iplc_sindex = (
+    SELECT iplc_sindex 
+    FROM InsurancePolicyPayments  
+    WHERE inpp_trans_id IS NULL 
+    ORDER BY iplc_sindex 
+    LIMIT 1
+);
+select * from insurancepolicypayments
+
+
+
+
+UPDATE InsurancePolicyPayments SET inpp_trans_id = 2 
+WHERE inpp_iplc_id = 2 
+AND 
+iplc_sindex = (SELECT iplc_sindex FROM InsurancePolicyPayments  WHERE (inpp_trans_id IS NULL OR inpp_date IS NULL) 
+ORDER BY iplc_sindex LIMIT 1)
+
+SELECT iplc_sindex FROM InsurancePolicyPayments  WHERE (inpp_trans_id IS NULL AND inpp_date IS NULL) 
+ORDER BY iplc_sindex LIMIT 1
+
+
+UPDATE InsurancePolicyPayments
+SET inpp_trans_id = 'ffyhuj', inpp_date = '2023-09-26'
+WHERE inpp_iplc_id = 1
+AND inpp_trans_id IS NULL
+AND iplc_sindex = (
+    SELECT MIN(iplc_sindex)
+    FROM InsurancePolicyPayments
+    WHERE inpp_iplc_id = 1
+    AND inpp_trans_id IS NULL
+	ORDER BY iplc_sindex LIMIT 1
+);
+
+select * from InsurancePolicyPayments
+SELECT MIN(iplc_sindex) AS next_session
+FROM InsurancePolicyPayments
+WHERE inpp_iplc_id = 1
+AND inpp_trans_id IS NULL
+AND iplc_sindex > (
+    SELECT MAX(iplc_sindex)
+    FROM InsurancePolicyPayments
+    WHERE inpp_iplc_id = 1
+    AND inpp_trans_id IS NOT NULL
+);
+UPDATE InsurancePolicyPayments
+SET inpp_trans_id = 'ffyhuj', inpp_date = '2023-09-26'
+WHERE iplc_sindex = (
+    SELECT MIN(iplc_sindex) AS next_session
+    FROM InsurancePolicyPayments
+    WHERE inpp_iplc_id = 2
+    AND inpp_trans_id IS NULL
+    AND iplc_sindex > (
+        SELECT MAX(iplc_sindex)
+        FROM InsurancePolicyPayments
+        WHERE inpp_iplc_id = 2
+        AND inpp_trans_id IS NOT NULL
+    )
+);
+
+select * from InsurancePolicyPayments
+UPDATE InsurancePolicyPayments
+SET inpp_trans_id = 'fdhvbf', inpp_date = '2023-09-26'
+WHERE inpp_iplc_id = 1 AND inpp_trans_id IS NULL AND inpp_date IS NULL
+ORDER BY iplc_sindex
+LIMIT 1;
+
+
+UPDATE InsurancePolicyPayments
+SET inpp_trans_id = 'asdgf', inpp_date = '2023-09-26'
+WHERE inpp_iplc_id = 1 
+  AND inpp_trans_id IS NULL 
+  AND inpp_date IS NULL 
+  AND iplc_sindex = (
+    SELECT MIN(iplc_sindex) 
+    FROM InsurancePolicyPayments 
+    WHERE inpp_iplc_id = 1
+      AND inpp_trans_id IS NULL 
+      AND inpp_date IS NULL
+  );
+
+
+
+select * from InsurancePolicyPayments
