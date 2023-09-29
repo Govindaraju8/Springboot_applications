@@ -1,0 +1,108 @@
+/*************************************model class*************************/
+
+package com.spring.boot.jdbc.Customeroptions.model;
+
+public class ErrorResponse {
+	private String errorCode;
+	private String errorMessage;
+
+	public String getErrorCode() {
+		return errorCode;
+	}
+
+	public void setErrorCode(String errorCode) {
+		this.errorCode = errorCode;
+	}
+
+	public String getErrorMessage() {
+		return errorMessage;
+	}
+
+	public void setErrorMessage(String errorMessage) {
+		this.errorMessage = errorMessage;
+	}
+
+}
+
+/***************************INterface DAO ******************************/
+
+	int getCountNullTransId(int policyId);
+
+
+/**************************DAO IMplementation  **************************/
+
+private final String SQL_DISPLAY_Exception = "SELECT COUNT(*) \r\n" + "FROM insurancepolicypayments \r\n"
+			+ "WHERE inpp_trans_id IS NULL \r\n" + "AND inpp_iplc_id = ?";
+
+
+@Override
+	public int getCountNullTransId(int policyId) {
+		// Use jdbcTemplate to execute the query and return the count as an integer
+		return jdbcTemplate.queryForObject(SQL_DISPLAY_Exception, Integer.class, policyId);
+	}
+
+
+ /******************* repository code *************************************/
+
+ public boolean checkTransactionLimitExceeded(int policyId) {
+		int i = hospitaldao.getCountNullTransId(policyId);
+		if (i == 0) {
+			return true;
+		}
+		return false;
+	}
+
+
+ /********************** controller ***************************************/
+
+ @PostMapping("/updatePayment")
+	public ResponseEntity<String> updatePaymentRecord(@RequestBody Map<String, String> requestData)
+			throws ParseException, TransactionLimitExceededException {
+		System.out.println(requestData);
+		String policyIdStr = requestData.get("policyId");
+		String transactionId = requestData.get("transactionId");
+		String transDateStr = requestData.get("transDate");
+		if (transDateStr == null || transDateStr.isEmpty()) {
+			return ResponseEntity.badRequest().body("currentDate is missing or empty.");
+		}
+
+		try {
+			int policyId = Integer.parseInt(policyIdStr);
+
+			// Parse currentDateStr into a Date object (assuming it's in ISO format)
+			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+			java.util.Date transDate = dateFormat.parse(transDateStr);
+
+			// Convert java.util.Date to java.sql.Date
+			java.sql.Date sqlTransDate = new java.sql.Date(transDate.getTime());
+
+			// Call the updateTransactionId method from the repository with java.sql.Date
+			boolean updateSuccess = hospitalres.updateTransactionsId(policyId, transactionId, sqlTransDate);
+
+			if (updateSuccess) {
+				return ResponseEntity.ok("Payment record updated successfully.");
+			} else {
+				// Define and set the transactionLimitExceeded variable based on your logic
+				boolean transactionLimitExceeded = hospitalres.checkTransactionLimitExceeded(policyId);
+
+				if (transactionLimitExceeded) {
+					throw new TransactionLimitExceededException("Your transactions are excedded.");
+				} else {
+					return ResponseEntity.badRequest().body("Payment successful");
+				}
+			}
+		} catch (NumberFormatException e) {
+			return ResponseEntity.badRequest().body("Invalid policyId provided.");
+		}
+	}
+
+	@ExceptionHandler(TransactionLimitExceededException.class)
+	public ResponseEntity<ErrorResponse> handleTransactionLimitExceeded(TransactionLimitExceededException ex) {
+		ErrorResponse errorResponse = new ErrorResponse();
+		errorResponse.setErrorCode("TRANSACTION_LIMIT_EXCEEDED");
+		errorResponse.setErrorMessage(ex.getMessage());
+
+		return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+	}
+
+
